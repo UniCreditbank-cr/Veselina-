@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UniCredit Bank - Портал за защитени преводи</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f4f4f4;
+      color: #333;
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 40px;
+      background-color: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      border-bottom: 4px solid #E2001A;
+      position: sticky; top: 0; z-index: 1000;
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo svg { width: 45px; height: 45px; }
+    .logo-text { font-weight: bold; font-size: 28px; color: #E2001A; letter-spacing: -1px; }
+
+    main.content { max-width: 920px; margin: 40px auto 60px; padding: 0 20px; }
+
+    /* ALERTES ET BOXES */
+    .welcome-box {
+      background-color: #E2001A; color: white; border-radius: 8px;
+      padding: 20px 28px; font-weight: 600; font-size: 19px; text-align: center;
+      box-shadow: 0 4px 12px rgba(226, 0, 26, 0.2);
+    }
+    .notification-box {
+      background: white; border-left: 6px solid #28a745; border-radius: 8px;
+      padding: 24px 32px; margin: 30px auto; font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+
+    /* FORMULAIRE */
+    form.transfer-form {
+      background: white; max-width: 480px; margin: 0 auto; padding: 40px;
+      border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+    }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: 700; font-size: 13px; color: #555; text-transform: uppercase; }
+    input[type="text"], input[type="file"] {
+      width: 100%; padding: 14px 18px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; background: #fafafa;
+    }
+    .file-confirm { color: #28a745; font-size: 12px; font-weight: bold; display: none; margin-top: 5px; }
+
+    button[type="submit"] {
+      width: 100%; padding: 16px; font-size: 18px; font-weight: 700; color: white;
+      background-color: #E2001A; border: none; border-radius: 6px; cursor: pointer; transition: 0.3s;
+    }
+    button[type="submit"]:hover { background-color: #b30015; }
+
+    /* NOTIFICATIONS TOAST ANIMÉES */
+    #notification-toast {
+      position: fixed; bottom: 20px; left: 20px; background: white;
+      padding: 12px 18px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+      display: flex; align-items: center; gap: 12px; z-index: 2000;
+      transform: translateX(-150%); transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border-left: 6px solid #28a745; min-width: 300px;
+    }
+    #notification-toast.show { transform: translateX(0); }
+    .toast-img { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; }
+    .toast-user { font-weight: bold; color: #E2001A; display: block; font-size: 14px; }
+    .toast-text { font-size: 13px; }
+
+    /* PAGE DE TRAITEMENT ET FACTURE */
+    .processing-container {
+      max-width: 800px; margin: 40px auto; background: white; border-radius: 15px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.15); padding: 50px; text-align: center; display: none;
+    }
+    .loader {
+      margin: 20px auto; border: 4px solid #f3f3f3; border-top: 4px solid #E2001A;
+      border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .invoice-card {
+      display: none; background: #fff; border-radius: 12px;
+      text-align: left; animation: fadeIn 0.8s;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    .timer-box {
+      background: #fff5f5; border: 1px solid #feb2b2; color: #c53030;
+      padding: 15px; border-radius: 8px; font-weight: bold; text-align: center; margin-bottom: 20px;
+    }
+    #timer { font-size: 26px; font-weight: 800; display: block; }
+
+    .price-tag { font-size: 36px; font-weight: 800; color: #E2001A; margin: 10px 0; }
+
+    .btn-pay {
+      display: block; width: 100%; background: #28a745; color: white; text-align: center;
+      padding: 20px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 20px;
+      margin-top: 25px; transition: 0.3s; box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+    }
+    .btn-pay:hover { background: #218838; transform: scale(1.02); }
+
+    .payment-icons { margin-top: 20px; opacity: 0.7; text-align: center; font-size: 11px; }
+  </style>
+</head>
+<body>
+
+  <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
+
+  <div id="notification-toast">
+    <img id="toast-pic" src="" class="toast-img" alt="Клиент">
+    <div class="toast-content">
+      <span class="toast-user" id="toast-user">Потребител</span>
+      <span class="toast-text" id="toast-text">Съобщение</span>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="logo">
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="45" fill="#E2001A"/><path d="M30 50 L55 50 L45 35 M55 50 L45 65" stroke="white" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="logo-text">UniCredit Bank</span>
+    </div>
+  </header>
+
+  <main id="page1" class="content">
+    <section class="welcome-box">Официален портал за валидиране - UniCredit International</section>
+    
+    <section class="notification-box">
+      <p>Здравейте, **г-жо Веселина Димитрова**, превод в размер на **150 000,00 €** очаква освобождаване към Вашата банкова сметка. Моля, попълнете информацията за съответствие по-долу.</p>
+    </section>
+
+    <form class="transfer-form" onsubmit="showProcessing(event)">
+      <div class="form-group">
+        <label>Бенефициент</label>
+        <input type="text" id="beneficiary" readonly value="ВЕСЕЛИНА ДИМИТРОВА">
+      </div>
+      <div class="form-group">
+        <label>Вашата обслужваща банка</label>
+        <input type="text" id="bank" required placeholder="Напр: UniCredit Bulbank, ОББ и др.">
+      </div>
+      <div class="form-group">
+        <label>IBAN на сметката получател</label>
+        <input type="text" id="account-number" required placeholder="BG...">
+      </div>
+      <div style="background: #fdfdfd; padding: 15px; border: 1px dashed #ccc; border-radius: 8px; margin-bottom: 20px;">
+        <label style="color: #E2001A;">Документ за самоличност (Лична карта / Паспорт)</label>
+        <input type="file" required onchange="confirmFile(this)">
+        <div class="file-confirm" id="confirm-id">✓ Документът е готов за анализ</div>
+      </div>
+      <button type="submit">Валидиране на превода от 150 000 €</button>
+    </form>
+  </main>
+
+  <main id="page2" class="processing-container">
+    <div id="loading-area">
+      <h2 style="color:#444;">В ход е последна проверка на сигурността...</h2>
+      <div class="loader"></div>
+      <p id="status" style="font-weight:bold; color:#E2001A;">Удостоверяване на документи (0%)</p>
+      <div style="width:100%; background:#eee; height:10px; border-radius:5px; margin-top:20px; overflow:hidden;">
+        <div id="progress" style="width:0; height:100%; background:#E2001A; transition:0.3s;"></div>
+      </div>
+    </div>
+
+    <div id="invoice-card" class="invoice-card">
+      <div class="timer-box">
+        ИЗИСКВА СЕ ДЕЙСТВИЕ - СРОК ЗА ОСВОБОЖДАВАНЕ:
+        <span id="timer">30:00</span>
+      </div>
+
+      <div style="border-bottom: 2px solid #f4f4f4; padding-bottom: 15px; margin-bottom: 20px;">
+        <h3 style="margin:0; color:#333;">Статус: Готов за незабавен превод</h3>
+        <p style="font-size:13px; color:#666;">ID на досие: UC-TRANS-8829-BG</p>
+      </div>
+      
+      <p style="font-size: 15px; line-height: 1.6;">
+        Поздравления, **г-жо Димитрова**, Вашите документи са **одобрени**. <br><br>
+        За да финализирате превода на Вашите **150 000,00 €**, е необходимо да заплатите таксите за гербово мито и международния банков протокол.
+      </p>
+      
+      <div style="background:#f9f9f9; padding:20px; border-radius:10px; margin:20px 0; border: 1px solid #e2e2e2; text-align: center;">
+        <span style="font-size:12px; text-transform:uppercase; color:#888; letter-spacing: 1px;">Обща сума на таксите за освобождаване</span>
+        <div class="price-tag">250,00 €</div>
+        <p style="color:#28a745; font-size:14px; font-weight:bold; margin:0;">✓ Автоматичен превод на 150 000 € веднага след плащане.</p>
+      </div>
+
+      <a href="#" class="btn-pay">Платете 250 € и получете своите 150 000 €</a>
+      
+      <div class="payment-icons">
+        🔒 Сигурни транзакции, криптирани чрез UniCredit SSL<br>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/2560px-Visa_Inc._logo.svg.png" width="35" style="margin:10px 5px;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png" width="28" style="margin:10px 5px;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/PayPal.svg/1200px-PayPal.svg.png" width="50" style="margin:10px 5px;">
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Configuration des témoignages (Traductions bulgares)
+    const testimonials = [
+      { user: "Иван П.", text: "Току-що получих 150 000 € успешно.", pic: "https://randomuser.me/api/portraits/men/32.jpg" },
+      { user: "Мария С.", text: "Таксите са платени, парите пристигнаха за 15 мин.", pic: "https://randomuser.me/api/portraits/women/44.jpg" },
+      { user: "Георги Л.", text: "Много ефективно обслужване от UniCredit, благодаря!", pic: "https://randomuser.me/api/portraits/men/12.jpg" }
+    ];
+    
+    let currentIdx = 0;
+    const toast = document.getElementById('notification-toast');
+    const sound = document.getElementById('notif-sound');
+
+    // Gestion des notifications
+    function showNextTestimonial() {
+      document.getElementById('toast-pic').src = testimonials[currentIdx].pic;
+      document.getElementById('toast-user').innerText = testimonials[currentIdx].user;
+      document.getElementById('toast-text').innerText = testimonials[currentIdx].text;
+      
+      toast.classList.add('show');
+      sound.play().catch(() => {}); 
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+        currentIdx = (currentIdx + 1) % testimonials.length;
+        setTimeout(showNextTestimonial, 4000);
+      }, 5000);
+    }
+    setTimeout(showNextTestimonial, 2000);
+
+    function confirmFile(input) {
+      document.getElementById('confirm-id').style.display = 'block';
+    }
+
+    function startTimer(duration, display) {
+      let timer = duration, minutes, seconds;
+      setInterval(function () {
+        minutes = parseInt(timer / 60, 10);
+        seconds = parseInt(timer % 60, 10);
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+        display.textContent = minutes + ":" + seconds;
+        if (--timer < 0) timer = 0;
+      }, 1000);
+    }
+
+    function showProcessing(event) {
+      event.preventDefault();
+      document.getElementById("page1").style.display = "none";
+      document.getElementById("page2").style.display = "block";
+      
+      let percent = 0;
+      const progress = document.getElementById("progress");
+      const status = document.getElementById("status");
+      
+      const interval = setInterval(() => {
+        if (percent >= 100) {
+          clearInterval(interval);
+          document.getElementById("loading-area").style.display = "none";
+          document.getElementById("invoice-card").style.display = "block";
+          startTimer(30 * 60, document.querySelector('#timer'));
+        } else {
+          percent++;
+          progress.style.width = percent + "%";
+          if(percent < 40) status.innerText = "Анализ на документите... " + percent + "%";
+          else if(percent < 80) status.innerText = "Проверка в сървърите на UniCredit... " + percent + "%";
+          else status.innerText = "Генериране на нареждане за превод... " + percent + "%";
+        }
+      }, 60);
+    }
+  </script>
+</body>
+</html>
